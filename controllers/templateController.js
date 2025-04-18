@@ -3,10 +3,23 @@ const Template = require('../models/Template');
 // Obtener todas las plantillas
 exports.getTemplates = async (req, res) => {
     try {
-        const templates = await Template.find();
+        const { q, type } = req.query; // Obtener los parámetros de búsqueda desde la query string
+
+        // Validar que el tipo esté dentro del enum
+        const validTypes = ['welcome', 'follow-up', 'farewell']; // Enum definido en el modelo
+        if (type && !validTypes.includes(type)) {
+            return res.status(400).json({ error: `El tipo '${type}' no es válido. Tipos permitidos: ${validTypes.join(', ')}` });
+        }
+
+        // Construir el filtro dinámico
+        const filter = {
+            ...(q && { content: { $regex: q, $options: 'i' } }), // Filtrar por contenido usando regex
+            ...(type && { type }) // Filtrar por tipo si se proporciona
+        };
+        const templates = await Template.find(filter); // Buscar plantillas con el filtro
         res.status(200).json(templates);
     } catch (error) {
-        res.status(500).json({ error: 'Error al obtener las plantillas' });
+        res.status(500).json({ error: error.message });
     }
 };
 
@@ -69,3 +82,4 @@ exports.deleteTemplate = async (req, res) => {
         res.status(500).json({ error: 'Error al eliminar la plantilla' });
     }
 };
+
